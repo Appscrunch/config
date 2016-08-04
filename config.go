@@ -12,9 +12,9 @@ import (
 
 var configPath string
 
-// GetFromGlobalConf unmarshal json-object cf
+// ReadGlobalConfig unmarshal json-object cf
 // If parsing was not successuful, function return a structure with default options
-func GetFromGlobalConf(cf interface{}, whatParsed string) error {
+func ReadGlobalConfig(cf interface{}, whatParsed string) error {
 
 	file, e := ioutil.ReadFile(GetConfigFilename())
 	if e != nil {
@@ -26,11 +26,12 @@ func GetFromGlobalConf(cf interface{}, whatParsed string) error {
 	if err := json.Unmarshal([]byte(file), cf); err != nil {
 		//log.WithCaller(slf.CallerShort).Errorf("Error parsing JSON: %s. For [%s] will be used defaulf options.",
 		//	err.Error(), whatParsed)
-	} else {
-		fmt.Fprintf(os.Stderr, "[config] Parsed [%s] configuration from [%s] file", whatParsed, GetConfigFilename())
-		fmt.Fprintf(os.Stderr, "[config] If a field has wrong format, will be used default value.")
+		fmt.Fprintf(os.Stderr, "[config] Error: %s\n", e.Error())
 		return err
 	}
+	fmt.Fprintf(os.Stderr, "[config] Parsed [%s] configuration from [%s] file.\n", whatParsed, GetConfigFilename())
+	//fmt.Fprintf(os.Stderr, "[config] If a field has wrong format, will be used default value.\n")
+
 	//fmt.Pri("%v", cf)
 	return nil
 }
@@ -39,7 +40,7 @@ func GetFromGlobalConf(cf interface{}, whatParsed string) error {
 func GetConfigFilename() string {
 
 	if configPath != "" {
-		fmt.Fprintf(os.Stderr, "[config] use config path %s\n", configPath)
+		//fmt.Fprintf(os.Stderr, "[config] use config path %s\n", configPath)
 		return configPath
 	}
 
@@ -51,7 +52,7 @@ func GetConfigFilename() string {
 		// without ".exe"
 		//TODO: FIX use path func
 		binaryPath = binaryPath[:len(binaryPath)-4]
-		fmt.Fprintf(os.Stderr, "[config] Config file for windows %s", binaryPath)
+		fmt.Fprintf(os.Stderr, "[config] Config file for windows %s\n", binaryPath)
 	}
 
 	configPath = binaryPath + ".config"
