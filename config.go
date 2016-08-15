@@ -12,6 +12,9 @@ import (
 
 var configPath string
 
+//for logger
+var CallerInfo = "false"
+
 // ReadGlobalConfig unmarshal json-object cf
 // If parsing was not successuful, function return a structure with default options
 func ReadGlobalConfig(cf interface{}, whatParsed string) error {
@@ -32,7 +35,7 @@ func ReadGlobalConfig(cf interface{}, whatParsed string) error {
 	fmt.Fprintf(os.Stderr, "[config] Parsed [%s] configuration from [%s] file.\n", whatParsed, GetConfigFilename())
 	//fmt.Fprintf(os.Stderr, "[config] If a field has wrong format, will be used default value.\n")
 
-	//fmt.Pri("%v", cf)
+	//fmt.Printf("%v\n", cf)
 	return nil
 }
 
@@ -40,7 +43,6 @@ func ReadGlobalConfig(cf interface{}, whatParsed string) error {
 func GetConfigFilename() string {
 
 	if configPath != "" {
-		//fmt.Fprintf(os.Stderr, "[config] use config path %s\n", configPath)
 		return configPath
 	}
 
