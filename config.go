@@ -185,20 +185,6 @@ func readOsArgsInner(cf interface{}) error {
 		}
 	}
 
-	/*
-		flags := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-
-		for _,fld := range *fields {
-			switch(fld.field.Type.Kind()){
-			case reflect.String:
-				flags.String(fld.name, fld.value.String(), "")
-			}
-			//fmt.Println(fld.name, fld.field.Type, fld.value)
-		}
-		if err := flags.Parse(os.Args[1:]); err!=nil {
-			fmt.Fprintf(os.Stderr, "error parse flags:%v\n", err)
-		}*/
-
 	return nil
 }
 
