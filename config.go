@@ -241,7 +241,7 @@ func dumpFields(cf interface{}, whatParsed string) {
 func readOsArgs(cf interface{}) {
 	err := readOsArgsInner(cf)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ERROR] [config] parse os flags [%v]", err)
+		fmt.Fprintf(os.Stderr, "[ERROR] [config] parse os flags [%v]\n", err)
 	}
 }
 
@@ -273,10 +273,10 @@ func ReadGlobalConfig(cf interface{}, whatParsed string) {
 	//filename := GetConfigFilename()
 	err := readGlobalConfigInner(cf, configPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ERROR] [config] parse [%s] error [%v]", whatParsed, err)
+		fmt.Fprintf(os.Stderr, "[ERROR] [config] parse \"%s\" error \"%v\"\n", whatParsed, err)
 	} else {
 		if cfg.Verbose {
-			fmt.Fprintf(os.Stderr, "[INFO] [config] Parsed [%s] configuration from file [%s].\n", whatParsed, configPath)
+			fmt.Fprintf(os.Stderr, "[INFO] [config] Parsed \"%s\" configuration from file [%s].\n", whatParsed, configPath)
 		}
 	}
 	readOsArgs(cf)
@@ -301,8 +301,8 @@ func initConfigPath() {
 			configPathSource = configPathSource + " absolute"
 			return
 		}
-		configPathSource = configPathSource + " relative"
-		configPath = filepath.Join(executableDir, configPath)
+		configPathSource = configPathSource + " relative, pwd"
+		//configPath = filepath.Join(executableDir, configPath)
 		return
 	}
 	binaryPath := executable
