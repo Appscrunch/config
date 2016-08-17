@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	//"flag"
+	"path/filepath"
 	"reflect"
 	"runtime"
 
@@ -15,34 +16,63 @@ import (
 )
 
 var configPath string
+var configPathSource = "?"
 
 //for logger
 var CallerInfo = "false"
 
+var executable string
+var executableDir string
+
 type configConfigT struct {
-	Verbose  bool
-	VVerbose bool
+	Verbose    bool
+	VVerbose   bool
+	ConfigPath string
 }
 
 var cfg = configConfigT{}
 
-func init() {
-	//read command line before config loading
-	readOsArgs(&cfg)
-	//read config
-	ReadGlobalConfig(&cfg, "default config")
-	/*for _,tmp := range os.Args {
-		fmt.Println(tmp)
-	}*/
+func defaultLogF(format string, args ...interface{}) {
+	if cfg.Verbose {
+		fmt.Fprintf(os.Stderr, format, args...)
+	}
 }
 
+//initialize config path and default command line options
+func init() {
+	exeName, err := osext.Executable()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] [config] could not get a path to binary file: %s\n", err.Error())
+		//fallback to os.Args
+		exeName = os.Args[0]
+	}
+
+	executable = exeName
+	executableDir = filepath.Dir(executable)
+
+	//read command line before config loading
+	readOsArgs(&cfg)
+
+	defaultLogF("[config] exe:%s\n", executable)
+	defaultLogF("[config] dir:%s\n", executableDir)
+
+	initConfigPath()
+
+	defaultLogF("[config] file:%s\n", configPath)
+	defaultLogF("[config] source:%s\n", configPathSource)
+
+	//read config
+	ReadGlobalConfig(&cfg, "default config")
+}
+
+//structure field description
 type fieldDesc struct {
 	name  string
 	value reflect.Value
 	field reflect.StructField
 }
 
-//read all fields and values from structure 'v' into slice 'fields'
+//read all fields and values from structure 'v' (and inner structures) into slice 'fields'
 func flatFieldsRecursive(v reflect.Value, prefix string, fields *map[string]fieldDesc) {
 	if cfg.VVerbose {
 		fmt.Fprintf(os.Stderr, "flatFieldsRecursive %v len:%d\n", v, len(*fields))
@@ -76,6 +106,7 @@ func flatFields(v reflect.Value) *map[string]fieldDesc {
 	return pResult
 }
 
+//set any Int Value from string
 func setAsInt(v reflect.Value, s string, bitSize int) error {
 	i, err := strconv.ParseInt(s, 10, bitSize)
 	if err != nil {
@@ -85,6 +116,7 @@ func setAsInt(v reflect.Value, s string, bitSize int) error {
 	return nil
 }
 
+//set any Float Value from string
 func setAsFloat(v reflect.Value, s string, bitSize int) error {
 	f, err := strconv.ParseFloat(s, bitSize)
 	if err != nil {
@@ -94,6 +126,7 @@ func setAsFloat(v reflect.Value, s string, bitSize int) error {
 	return nil
 }
 
+//Set any Value from string
 func setAnyAsString(v reflect.Value, s string) error {
 	if !v.CanSet() {
 		return fmt.Errorf("Cannot set value %v", v)
@@ -136,6 +169,7 @@ func setAnyAsString(v reflect.Value, s string) error {
 	return fmt.Errorf("Error parse field %s value %s. Unknown kind %v ", v, s, v.Kind())
 }
 
+//read command line into config structure with reflection
 func readOsArgsInner(cf interface{}) error {
 	rv := reflect.ValueOf(cf)
 
@@ -188,6 +222,7 @@ func readOsArgsInner(cf interface{}) error {
 	return nil
 }
 
+//dump struct fields
 func dumpFields(cf interface{}, whatParsed string) {
 	rv := reflect.ValueOf(cf)
 
@@ -195,15 +230,12 @@ func dumpFields(cf interface{}, whatParsed string) {
 		return
 	}
 	value := reflect.Indirect(rv)
-	//fmt.Println("ReadGlobalConfig", rv, rv.Kind(), reflect.Indirect(rv).Kind())
 	fields := flatFields(value)
 
-	//if cfg.verbose {
 	fmt.Fprintf(os.Stderr, "[config] dump fields for %s\n", whatParsed)
 	for _, fld := range *fields {
 		fmt.Fprintf(os.Stderr, "[config] %s : %v = \"%s\"\n", fld.name, fld.field.Type, fld.value)
 	}
-	//}
 }
 
 func readOsArgs(cf interface{}) {
@@ -238,13 +270,13 @@ func readGlobalConfigInner(cf interface{}, filename string) error {
 }
 
 func ReadGlobalConfig(cf interface{}, whatParsed string) {
-	filename := GetConfigFilename()
-	err := readGlobalConfigInner(cf, filename)
+	//filename := GetConfigFilename()
+	err := readGlobalConfigInner(cf, configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[ERROR] [config] parse [%s] error [%v]", whatParsed, err)
 	} else {
 		if cfg.Verbose {
-			fmt.Fprintf(os.Stderr, "[INFO]  [config] Parsed [%s] configuration from file [%s].\n", whatParsed, filename)
+			fmt.Fprintf(os.Stderr, "[INFO] [config] Parsed [%s] configuration from file [%s].\n", whatParsed, configPath)
 		}
 	}
 	readOsArgs(cf)
@@ -253,26 +285,32 @@ func ReadGlobalConfig(cf interface{}, whatParsed string) {
 	}
 }
 
-// GetConfigFilename is a function fot getting a name of a binary with full path to it
-func GetConfigFilename() string {
+func initConfigPath() {
 
+	//redefine from command line
+	configPathSource = "hardcoded"
+	if cfg.ConfigPath != "" {
+		configPath = cfg.ConfigPath
+		configPathSource = "command line"
+	}
+
+	//hardcoded or redefined
 	if configPath != "" {
-		return configPath
+		//relative or absolute path?
+		if filepath.IsAbs(configPath) {
+			configPathSource = configPathSource + " absolute"
+			return
+		}
+		configPathSource = configPathSource + " relative"
+		configPath = filepath.Join(executableDir, configPath)
+		return
 	}
-
-	binaryPath, err := osext.Executable()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: could not get a path to binary file: %s\n", err.Error())
-	}
+	binaryPath := executable
 	if runtime.GOOS == "windows" {
 		// without ".exe"
-		//TODO: FIX use path func
-		binaryPath = binaryPath[:len(binaryPath)-4]
-		if cfg.Verbose {
-			fmt.Fprintf(os.Stderr, "[config] Config file for windows %s\n", binaryPath)
-		}
+		ext := filepath.Ext(binaryPath)
+		binaryPath = binaryPath[:len(binaryPath)-len(ext)]
 	}
-
+	configPathSource = "executable name"
 	configPath = binaryPath + ".config"
-	return configPath
 }
