@@ -215,6 +215,15 @@ func readOsArgsInner(cf interface{}) error {
 				fmt.Fprintf(os.Stderr, "error parse field %s\n", err)
 			}
 		} else {
+			if !fld.value.CanSet() {
+				fmt.Fprintf(os.Stderr, "cannot set field %s\n", fld.name)
+				continue
+			}
+			if fld.value.Kind() != reflect.Bool {
+				fmt.Fprintf(os.Stderr, "field %s is not Bool, do you forget '=' after option?\n", fld.name)
+				continue
+			}
+
 			fld.value.Set(reflect.ValueOf(true))
 		}
 	}
