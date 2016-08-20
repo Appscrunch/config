@@ -18,9 +18,6 @@ import (
 var configPath string
 var configPathSource = "?"
 
-//for logger
-var CallerInfo = "false"
-
 var executable string
 var executableDir string
 
@@ -31,6 +28,10 @@ type configConfigT struct {
 }
 
 var cfg = configConfigT{}
+
+func Verbose() bool {
+	return cfg.Verbose
+}
 
 func defaultLogF(format string, args ...interface{}) {
 	if cfg.Verbose {
@@ -180,10 +181,10 @@ func readOsArgsInner(cf interface{}) error {
 	fields := flatFields(value)
 
 	/*if cfg.Verbose {
-		fmt.Fprintf(os.Stderr, "[config] dump fields\n")
-		for _,fld := range *fields {
-			fmt.Fprintf(os.Stderr, "[config] %s : %v = \"%v\"\n", fld.name, fld.field.Type, fld.value)
-		}
+	  fmt.Fprintf(os.Stderr, "[config] dump fields\n")
+	  for _,fld := range *fields {
+	    fmt.Fprintf(os.Stderr, "[config] %s : %v = \"%v\"\n", fld.name, fld.field.Type, fld.value)
+	  }
 	}*/
 
 	for _, arg := range os.Args[1:] {
@@ -267,7 +268,7 @@ func readGlobalConfigInner(cf interface{}, filename string) error {
 
 	if err := json.Unmarshal([]byte(file), cf); err != nil {
 		//log.WithCaller(slf.CallerShort).Errorf("Error parsing JSON: %s. For [%s] will be used defaulf options.",
-		//	err.Error(), whatParsed)
+		//  err.Error(), whatParsed)
 		//fmt.Fprintf(os.Stderr, "[config] Error: %s\n", e.Error())
 		return err
 	}
