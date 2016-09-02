@@ -244,7 +244,7 @@ func dumpFields(cf interface{}, whatParsed string) {
 
 	fmt.Fprintf(os.Stderr, "[config] dump fields for %s\n", whatParsed)
 	for _, fld := range *fields {
-		fmt.Fprintf(os.Stderr, "[config] %s : %v = \"%s\"\n", fld.name, fld.field.Type, fld.value)
+		fmt.Fprintf(os.Stderr, "[config] %s : %v = \"%v\"\n", fld.name, fld.field.Type, fld.value)
 	}
 }
 
