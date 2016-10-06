@@ -7,7 +7,7 @@ import (
 	"github.com/kardianos/osext"
 )
 
-func getPathForDir(path string) (string, error) {
+func GetPathForDir(path string) (string, error) {
 
 	if filepath.IsAbs(path) == true {
 		return path, nil
@@ -24,7 +24,7 @@ func getPathForDir(path string) (string, error) {
 }
 
 // Exists returns whether the given file or directory exists or not.
-func exists(path string) (bool, error) {
+func Exists(path string) (bool, error) {
 
 	_, err := os.Stat(path)
 	if err == nil {
