@@ -17,29 +17,47 @@ const chmodFile = 0755
 
 func GetUUID(DirWithUUID string) string {
 
-	uuidPath, err := GetFileNameWithUUID(DirWithUUID)
+	UUID, err := GetUUIDFromFile(DirWithUUID)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ERROR] [config]: File with uuid %s does not exist; creating new\n", err.Error())
+		fmt.Fprintf(os.Stderr, "[ERROR] [config]: Could not get uuid from file [%s]; creating new\n", err.Error())
 	} else {
-		defaultLogF("[config] uuidPath=%s\n", uuidPath)
-		UUID, err := GetUUIDFromFile(uuidPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "[ERROR] [config]: Could not get uuid from file [%s]; creating new\n", err.Error())
-		} else {
-			return UUID
-		}
+		return UUID
 	}
 
-	u, err := CreateNewUUID(uuidPath)
+	u, err := CreateNewUUID(DirWithUUID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[ERROR] [config]: Could not create uuid in file %s; creating <%s>\n", err.Error(), uuidFile)
 	}
-	u, err = CreateNewUUID(uuidPath)
+	u, err = CreateNewUUID(DirWithUUID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[ERROR] [config]: Could not create uuid in file %s; return just %s instead\n", err.Error(), u)
 	}
 	return u
 
+}
+
+func GetUUIDFromFile(DirWithUUID string) (string, error) {
+
+	uuidPath, err := GetFileNameWithUUID(DirWithUUID)
+	if err != nil {
+		defaultLogF("[config]:  File with uuid [%s] does not exist; creating new\n", err.Error())
+	}
+
+	defaultLogF("[config] uuidPath=[%s]\n", uuidPath)
+
+	//Reading and validate UUID
+	u, err := ioutil.ReadFile(uuidPath)
+	if err != nil {
+		defaultLogF("[config]: Could not read uuid from [%s]: [%s]\n", uuidPath, err.Error())
+		return "", err
+	}
+
+	uValidated, err := uuid.FromString(string(u))
+	if err != nil {
+		defaultLogF("[config]: Could not validate uuid [%s] from file [%s]\n", string(u), uuidPath)
+		return "", err
+	}
+	return uValidated.String(), nil
 }
 
 func GetFileNameWithUUID(DirWithUUID string) (string, error) {
@@ -49,7 +67,7 @@ func GetFileNameWithUUID(DirWithUUID string) (string, error) {
 	//formatting if we had related path
 	fpath, err := GetPathForDir(DirWithUUID)
 	if err != nil {
-		defaultLogF("[config] UUID dir: %s\n", err.Error())
+		defaultLogF("[config] UUID dir: [%s]\n", err.Error())
 		return "", err
 	}
 
@@ -57,55 +75,53 @@ func GetFileNameWithUUID(DirWithUUID string) (string, error) {
 	fileWithUUIDExists = filepath.Join(fpath, uuidFile)
 	exist, err := Exists(fileWithUUIDExists)
 	if err != nil && !exist {
-		defaultLogF("[config]: Wrong path for UUOD (%s): %s\n", fileWithUUIDExists, err.Error())
+		defaultLogF("[config]: Wrong path for UUOD [%s]: [%s]\n", fileWithUUIDExists, err.Error())
 		return "", err
 	}
 
 	return fileWithUUIDExists, nil
 }
 
-func GetUUIDFromFile(uuidPath string) (string, error) {
+func CreateNewUUID(DirWithUUID string) (string, error) {
 
-	//Reading and validate UUID
-	u, err := ioutil.ReadFile(uuidPath)
+	uuidPath, err := GetFileNameWithUUID(DirWithUUID)
 	if err != nil {
-		defaultLogF("[config]: Could not read uuid from %s\n", uuidPath)
-		return "", err
+		defaultLogF("[config]:  File with uuid [%s] does not exist; creating new\n", err.Error())
 	}
 
-	uValidated, err := uuid.FromString(string(u))
-	if err != nil {
-		defaultLogF("[config]: Could not validate uuid %s from file %s\n", string(u), uuidPath)
-		return "", err
-	}
-	return uValidated.String(), nil
-}
-
-func CreateNewUUID(uuidPath string) (string, error) {
-
-	defaultLogF("[config]: CreateNewUUID... fileWithUUIDExists=%s\n", uuidPath)
+	defaultLogF("[config]: CreateNewUUID... uuidPath=[%s]\n", uuidPath)
 
 	u := uuid.NewV4()
 	uStr := u.String()
 
+	//file exists
 	exist, err := Exists(uuidPath)
 	if err == nil && exist {
-		err := ioutil.WriteFile("uuidPath", u.Bytes(), chmodFile)
+		err := ioutil.WriteFile(uuidPath, []byte(u.String()), chmodFile)
 		if err == nil {
 			return u.String(), nil
 		}
 	}
 
-	defaultLogF("[config]: directories %s doesn't exist; creating...\n", uuidPath)
-	err = os.MkdirAll(uuidPath, chmodFile)
+	// directory exists
+	exist, err = Exists(DirWithUUID)
+	if err == nil && exist {
+		err := ioutil.WriteFile(uuidPath, []byte(u.String()), chmodFile)
+		if err == nil {
+			return u.String(), nil
+		}
+	}
+
+	defaultLogF("[config]: Directory [%s] doesn't exist; creating...\n", DirWithUUID)
+	err = os.MkdirAll(DirWithUUID, chmodFile)
 	if err == nil {
-		err := ioutil.WriteFile("uuidPath", u.Bytes(), chmodFile)
+		err := ioutil.WriteFile(uuidPath, []byte(u.String()), chmodFile)
 		if err == nil {
 			return u.String(), nil
 		}
 	}
 
-	defaultLogF("[config] could not create file %s; searching near binary file\n", uuidPath)
+	defaultLogF("[config]: Could not create file [%s]; searching near binary file\n", uuidPath)
 	uStr, err = GetUUIDFromFile(uuidFile)
 	if err == nil {
 		return u.String(), nil
@@ -117,6 +133,6 @@ func CreateNewUUID(uuidPath string) (string, error) {
 		return uStr, nil
 	}
 
-	defaultLogF("[config]: Could not create uuid in file %s; return just u4=%s instead\n", err.Error(), u.String())
+	defaultLogF("[config]: Could not create uuid in file [%s]; return just u4=[%s] instead\n", err.Error(), u.String())
 	return u.String(), err
 }
