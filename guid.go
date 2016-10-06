@@ -13,7 +13,8 @@ import (
 
 const uuidFile = "local.conf"
 
-const chmodFile = 0755
+const chmodDir = 0755
+const chmodFile = 0744
 
 func GetUUID(DirWithUUID string) string {
 
@@ -113,7 +114,7 @@ func CreateNewUUID(DirWithUUID string) (string, error) {
 	}
 
 	defaultLogF("[config]: Directory [%s] doesn't exist; creating...\n", DirWithUUID)
-	err = os.MkdirAll(DirWithUUID, chmodFile)
+	err = os.MkdirAll(DirWithUUID, chmodDir)
 	if err == nil {
 		err := ioutil.WriteFile(uuidPath, []byte(u.String()), chmodFile)
 		if err == nil {
